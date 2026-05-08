@@ -11,6 +11,7 @@ run_local
 *.parm7
 *.inpcrd
 *.mdinfo
+*.pdb
 
 # propka output
 *.pka

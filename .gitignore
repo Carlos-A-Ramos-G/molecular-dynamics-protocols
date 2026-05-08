@@ -1,0 +1,19 @@
+# Generated run scripts (re-created by run_upto_NVT.py)
+run_gpu
+run_local
+04_NVT/run_NVT_*.cmd
+04_NVT/run_NVT_*_local.sh
+
+# AMBER output files
+*.out
+*.nc
+*.rst7
+*.parm7
+*.inpcrd
+*.mdinfo
+
+# propka output
+*.pka
+
+# macOS
+.DS_Store

@@ -1,0 +1,10 @@
+source leaprc.protein.ff14SB
+source leaprc.water.tip3p
+source leaprc.gaff
+loadoff INH.lib
+loadamberparams INH_ff14SB.frcmod
+structure = loadpdb MUT_INH.pdb
+addions structure Na+ 0
+solvatebox structure TIP3PBOX 12
+saveamberparm structure structure.parm7 structure.rst7
+quit

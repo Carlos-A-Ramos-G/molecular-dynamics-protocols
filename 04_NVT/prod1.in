@@ -1,0 +1,23 @@
+equilibration
+ &cntrl
+  imin=0, 
+  irest=1,
+  ntx=5,
+  nstlim=25000000,  !200 ns simulation
+  dt=0.004,
+  ntb=1,
+  ntp=0,
+  ntc=2,
+  ntf=2,
+  ntt=3,
+  tempi=300,
+  temp0=300,
+  ntpr=10000,
+  ntwx=50000,
+  ntwr=10000,
+  cut=10,
+  ntxo = 1,
+  gamma_ln=1.0
+  iwrap = 1,
+/
+

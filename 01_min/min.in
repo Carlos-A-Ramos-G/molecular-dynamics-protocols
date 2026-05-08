@@ -1,0 +1,10 @@
+Initial minimization
+ &cntrl
+  imin   = 1,
+  maxcyc = 30000,
+  ncyc   = 500,
+  ntb    = 1,
+  ntxo   = 1,
+  cut    = 10.0,
+  iwrap  = 1
+ /

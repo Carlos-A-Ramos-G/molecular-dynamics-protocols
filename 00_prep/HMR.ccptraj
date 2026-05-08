@@ -1,0 +1,4 @@
+parm structure.parm7
+hmassrepartition dowater
+parmwrite out structure_HMR.parm7
+quit

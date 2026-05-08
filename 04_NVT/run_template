@@ -1,0 +1,53 @@
+#!/bin/bash
+#SBATCH --time=__WALLTIME__
+#SBATCH --nodes=1
+#SBATCH --gres=gpu:1
+#SBATCH --partition=gpu
+#SBATCH --job-name=NVT_c__START__
+#SBATCH --account=CHEM031804
+#SBATCH --output=NVT_c__START__-%j.out
+#SBATCH --error=NVT_c__START__-%j.err
+#
+# Unified NVT production worker.
+# Runs CHUNKS_PER_JOB sequential chunks of prod1.in inside this single SLURM
+# job, then self-resubmits the next job in the chain if more chunks remain.
+# All placeholders (__START__, __CPJ__, __TOTAL__, __WALLTIME__) are filled
+# in by script.sh on first submission and re-filled below for chained jobs.
+
+module load apps/amber/24
+
+cd "${SLURM_SUBMIT_DIR}"
+
+# --- Configuration injected at submission time ---
+START=__START__              # first chunk handled by THIS job (1-based)
+CHUNKS_PER_JOB=__CPJ__       # chunks run sequentially inside THIS job
+TOTAL_CHUNKS=__TOTAL__       # total chunks for the whole production run
+WALLTIME=__WALLTIME__        # propagated to chained jobs
+
+# Window of chunks this job is responsible for.
+end=$((START + CHUNKS_PER_JOB - 1))
+[ ${end} -gt ${TOTAL_CHUNKS} ] && end=${TOTAL_CHUNKS}
+
+# Bootstrap: on the very first chunk, seed structure_NVT_0.rst7 from stage 03.
+if [ ${START} -eq 1 ] && [ ! -f structure_NVT_0.rst7 ]; then
+    cp ../03_equil/structure_equil_6.rst7 structure_NVT_0.rst7
+fi
+
+for ((i=START; i<=end; i++));do
+    pmemd.cuda -O -i prod1.in -o structure_NVT_${i}.out \
+                              -p ../00_prep/structure_HMR.parm7 \
+                              -c structure_NVT_$((i-1)).rst7 \
+                              -r structure_NVT_${i}.rst7 \
+                              -x structure_NVT_${i}.nc
+done
+
+# --- Chain the next job only if more chunks remain ---
+if [ ${end} -lt ${TOTAL_CHUNKS} ]; then
+    next=$((end + 1))
+    sed -e "s|__START__|${next}|g" \
+        -e "s|__CPJ__|${CHUNKS_PER_JOB}|g" \
+        -e "s|__TOTAL__|${TOTAL_CHUNKS}|g" \
+        -e "s|__WALLTIME__|${WALLTIME}|g" \
+        run_template > run_NVT_${next}.cmd
+    sbatch run_NVT_${next}.cmd
+fi

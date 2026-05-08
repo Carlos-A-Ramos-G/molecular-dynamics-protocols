@@ -1,0 +1,47 @@
+; Example configuration for run_upto_NVT.py
+;
+; Copy to config.ini and edit. Then:
+;     python run_upto_NVT.py -c config.ini
+;
+; Anything you omit falls back to the DEFAULTS dict in run_upto_NVT.py.
+
+[run_upto_NVT]
+
+; ---- system ----
+pdb              = MUT_INH_monA.pdb
+use_propka       = no
+propka_path      = propka3        ; only used if use_propka = yes
+use_hmr          = yes            ; -> 4 fs timestep, structure_HMR.parm7
+temperature      = 300.0          ; K
+
+; ---- production length ----
+ns_per_chunk     = 100            ; ns
+total_chunks     = 5              ; -> 500 ns total
+
+; ---- execution mode ----
+execution_mode   = cluster        ; cluster (SLURM/sbatch) or local (GPU workstation)
+amber_home       =                ; local only: path to AMBER install dir
+                                  ;   sources $amber_home/amber.sh on startup
+                                  ;   leave blank if pmemd.cuda is already on PATH
+
+; ---- SLURM / cluster (ignored when execution_mode = local) ----
+chunks_per_job   = 5              ; 5 = single 5-day job; 1 = chained 1-day jobs
+walltime_master  = 1-00:00:00     ; covers 00 -> 03 only
+walltime_nvt     = 5-00:00:00     ; per NVT job (covers chunks_per_job chunks)
+amber_module     = apps/amber/24
+account          = CHEM567890
+job_name         = INH_MUT
+
+; ---- minimization convergence ----
+min_cycles_cap        = 100        ; safety cap on stage-01 outer loop
+convergence_threshold = 1.0e-3     ; kcal/mol/A on RMS gradient
+
+; ---- equilibration cycle lengths (per cycle) ----
+equil_npt_ns     = 1.25            ; cycles 1-5 (restrained NPT)
+equil_nvt_ns     = 5.0             ; cycle 6   (unrestrained NVT)
+
+; ---- heat ramp duration ----
+heat_ps          = 200             ; total heating duration in ps
+
+; ---- behaviour ----
+submit           = no              ; yes -> launch master script (sbatch or bash) at the end

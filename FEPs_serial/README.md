@@ -53,7 +53,6 @@ FEPs_serial/
 ├── test_fep_runner.py                  # pytest validation suite
 ├── analyse.sh                          # thin wrapper for `fep_runner.py analyse`
 ├── clean.sh                            # remove generated files from a system dir
-├── FEP_gaussian_quadrature_integrator.py  # legacy standalone integrator
 ├── setup_files/                        # one sub-folder per mutation (input data)
 │   └── FCE_to_ACE/                     # example: fluorocitrate → acetate
 │       ├── ligands_solvated.prmtop / .inpcrd / .pdb

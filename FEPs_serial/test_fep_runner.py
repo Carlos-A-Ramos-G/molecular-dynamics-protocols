@@ -21,8 +21,8 @@ N_WINDOWS = 9
 MICHAELIS_MASKS = {
     "timask1": "':608-611'",
     "timask2": "':612-615'",
-    "scmask1": "'@9292-9294'",
-    "scmask2": "'@9358,9360,9361'",
+    "scmask1": "'@9291-9294'",
+    "scmask2": "'@9358-9361'",
 }
 
 # 9-point Gauss-Legendre nodes mapped to [0, 1], sorted ascending.
@@ -153,8 +153,8 @@ def test_run_local_sh_contains_all_windows(generated, system):
 @pytest.mark.parametrize("mask_key,expected", [
     ("timask1", "':1-4'"),
     ("timask2", "':5-8'"),
-    ("scmask1", "'@54-65'"),
-    ("scmask2", "'@121-135'"),
+    ("scmask1", "'@1-4'"),
+    ("scmask2", "'@68-71'"),
 ])
 def test_ligand_masks_correct(generated, mask_key, expected):
     """Ligand arm masks must be the solvated-ligand residue/atom ranges."""

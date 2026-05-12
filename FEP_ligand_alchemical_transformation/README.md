@@ -54,7 +54,7 @@ FEP_ligand_alchemical_transformation/
 ├── analyse.sh                          # thin wrapper for `fep_runner.py analyse`
 ├── clean.sh                            # remove generated files from a system dir
 ├── setup_files/                        # one sub-folder per mutation (input data)
-│   └── FCE_to_ACE/                     # example: fluorocitrate → acetate
+│   └── FCE_to_ACE/                     # example: trifluoroacetyl → acetyl
 │       ├── ligands_solvated.prmtop / .inpcrd / .pdb
 │       ├── complex_solvated.prmtop / .inpcrd / .pdb
 │       ├── *.prepin, *.frcmod          # ligand force-field parameters

@@ -79,8 +79,8 @@ systems:
     coordinates: ligands_solvated.inpcrd
     timask1: "':1-4'"
     timask2: "':5-8'"
-    scmask1: "'@54-65'"
-    scmask2: "'@121-135'"
+    scmask1: "'@1-4'"
+    scmask2: "'@68-71'"
     resnew: ACE
 
   michaelis:
@@ -88,6 +88,6 @@ systems:
     coordinates: complex_solvated.inpcrd
     timask1: "':608-611'"
     timask2: "':612-615'"
-    scmask1: "'@9292-9294'"
-    scmask2: "'@9358,9360,9361'"
+    scmask1: "'@9291-9294'"
+    scmask2: "'@9358-9361'"
     resnew: ACE

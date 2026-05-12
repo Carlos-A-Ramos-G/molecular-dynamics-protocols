@@ -381,6 +381,16 @@ def _gen_local_script(sys_label: str, n_windows: int, n_replicas: int,
         'AMBER="$AMBERHOME/bin/pmemd.cuda"',
         'CPPTRAJ="$AMBERHOME/bin/cpptraj"',
         "",
+    ]
+
+    cuda_lib_path = cfg.get("amber", {}).get("cuda_lib_path", "").strip()
+    if cuda_lib_path:
+        L += [
+            f'export LD_LIBRARY_PATH="{cuda_lib_path}:${{LD_LIBRARY_PATH:-}}"',
+            "",
+        ]
+
+    L += [
         'log() { echo "[$(date "+%Y-%m-%d %H:%M:%S")] $*"; }',
         "",
         "# ---- Minimisation ------------------------------------------------",

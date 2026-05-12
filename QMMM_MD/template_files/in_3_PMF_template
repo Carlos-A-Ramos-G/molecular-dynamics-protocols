@@ -1,0 +1,34 @@
+PMF window STEP
+&cntrl
+  temp0     = 300.0,    ! Reference temperature at which the system is to be kept
+  tempi     = 300.0,    ! Initial temperature
+  ntt       = 3,        ! Switch for temperature scaling. Use Langevin dynamics with the collision frequency γ given by gamma_ln
+  irest     = 1,        ! restart a simulation
+  ntx       = 5,        ! Reading the coordinates and velocity from the  rst7 file
+  ntb       = 1,        ! Volume constant
+  cut       = EECUT,      ! Non bonded cut
+  gamma_ln  = 5.0,      ! Collision frequency
+  nstlim    = 50000,    ! Steps, for 50 ps
+  dt        = 0.001,    ! Every step of 1 fs
+  ntpr      = 50,       ! Print the progress every ntpr steps
+  ntwx      = 100,      ! Every ntwx steps, the coordinates will be written to the trajectory file.
+  ntwr      = 100,      ! Every ntwr steps during dynamics, the restrt file will be written
+  ntxo      = 1,        ! Format of the final coordinates,
+  ifqnt     = 1,        ! Switch on QM/MM coupled potential
+  nmropt    = 1,        ! For restraints
+/
+  &qmmm
+  qmmask   = QMMASK,
+  qmcharge = QCHARGE,
+  qm_theory= 'QLEVEL',
+  qmcut=EECUT,
+  printcharges = 1,
+  qm_ewald=0,
+  writepdb  = 1, !QM region will be written on the very first step to the file qmmm_region.pdb
+/
+&wt type = 'DUMPFREQ', istep1=20/
+/
+&wt type = 'END'/
+DISANG=STEP.restr
+DUMPAVE=STEP.dat
+/

@@ -1,0 +1,19 @@
+#!/bin/bash
+#SBATCH --time=1-00:00:00
+#SBATCH --job-name=STEPPMFSCHEME
+#SBATCH --ntasks=8
+#SBATCH --nodes=1
+#SBATCH --cpus-per-task=1
+
+hostname
+srun numactl -s
+
+module load PrgEnv-gnu/8.5.0
+
+source ~/.local/amber.sh
+
+export MPICH_NO_BUFFER_ALIAS_CHECK=1
+export SRUN_CPUS_PER_TASK=$SLURM_CPUS_PER_TASK
+
+srun --cpu-bind=cores sander.MPI -O -i eq_STEP.in -o eq_STEP.out -p PARM -c ../06_scan_umbrella_sampling/STEP.rst7 -r eq_STEP.rst7 -x eq_STEP.nc -inf eq_STEP.mdinfo
+srun --cpu-bind=cores sander.MPI -O -i PMF_STEP.in -o PMF_STEP.out -p PARM -c eq_STEP.rst7 -r PMF_STEP.rst7 -x PMF_STEP.nc -inf PMF_STEP.mdinfo

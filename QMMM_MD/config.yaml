@@ -1,0 +1,35 @@
+# QM/MM Umbrella Sampling — Configuration
+# Edit this file for your system, then run:
+#   python generate_inputs.py [--config config.yaml]
+#   python submit_jobs.py     [--config config.yaml] [--dry-run]
+
+# ── Input structures ──────────────────────────────────────────────────────────
+# Paths relative to the directory containing this config file
+parm: "../amber-nvt-workflow/00_prep/structure.parm7"
+geom: "../amber-nvt-workflow/04_NVT/structure_NVT_5.rst7"
+
+# ── Simulation label ──────────────────────────────────────────────────────────
+scheme: "WT"            # short label used in SLURM job names (e.g. "WT", "D127N")
+
+# ── QM region ─────────────────────────────────────────────────────────────────
+qlevel: "AM1"           # theory level: AM1, PM6, DFTB3, …
+eecut: 12               # non-bonded cutoff for both QM and MM regions (Å)
+qmmask: ":41,145 &!@C,O,N,H,CA,HA"   # AMBER mask for the QM atoms (no surrounding quotes)
+qcharge: 0              # total charge of the QM region
+
+# ── Reaction coordinate ───────────────────────────────────────────────────────
+# Serial numbers of the three atoms defining the scanned coordinate
+# Coordinate = r(atom1–atom2) − r(atom2–atom3)
+atom1: 2241
+atom2: 2242
+atom3: 617
+
+# ── Scan parameters ───────────────────────────────────────────────────────────
+coor0: 2.9              # starting coordinate value (Å) — applied to window 1
+windows: 30             # number of umbrella sampling windows
+scan_step: 0.1          # step size in Å per window (negative for reverse scan)
+
+# ── Force constants (kcal/mol/Å²) ─────────────────────────────────────────────
+force_equil: 10         # loose restraint holding the equilibration near coor0
+force_scan: 300         # tight — keeps each window at its target during the scan
+force_pmf: 100          # softer — allows natural fluctuations during PMF production

@@ -1,0 +1,20 @@
+#!/bin/bash
+#SBATCH --time=1-00:00:00
+#SBATCH --job-name=eqSCHEME
+#SBATCH --ntasks=8
+#SBATCH --nodes=1
+#SBATCH --cpus-per-task=1
+
+hostname
+srun numactl -s
+
+module load PrgEnv-gnu/8.5.0
+
+source ~/.local/amber.sh
+
+export MPICH_NO_BUFFER_ALIAS_CHECK=1
+export SRUN_CPUS_PER_TASK=$SLURM_CPUS_PER_TASK
+
+srun --cpu-bind=cores sander.MPI -O -i in -o 0.out -c GEOM -r 0.rst7 -x 0.nc -inf 0.mdinfo -p PARM
+
+cp 0.rst7 ../06_scan_umbrella_sampling/0.rst7

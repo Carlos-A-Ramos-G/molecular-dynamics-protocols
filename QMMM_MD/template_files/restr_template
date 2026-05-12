@@ -1,0 +1,6 @@
+&rst
+iat = ATOM1,ATOM2,ATOM2,ATOM3
+rstwt =1,-1,
+r1=VALI,r2=COOR,r3=COOR,r4=VALF,
+rk2=FORCE,rk3=FORCE,
+/

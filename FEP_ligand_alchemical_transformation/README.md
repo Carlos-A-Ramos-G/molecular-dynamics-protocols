@@ -46,7 +46,7 @@ python fep_runner.py analyse
 ## Repository layout
 
 ```
-FEPs_serial/
+FEP_ligand_alchemical_transformation/
 ├── fep_runner.py                       # main workflow script
 ├── config.yaml                         # the ONE file you edit per mutation
 ├── requirements.txt

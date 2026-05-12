@@ -9,8 +9,8 @@ set -euo pipefail
 
 # ─── USER CONFIGURATION ──────────────────────────────────────────────────────
 # Input structure files (paths relative to this script's directory)
-parm="../amber-nvt-workflow/00_prep/structure.parm7"
-geom="../amber-nvt-workflow/04_NVT/structure_NVT_5.rst7"
+parm="../NVT_MMMD_protein_simulation/00_prep/structure.parm7"
+geom="../NVT_MMMD_protein_simulation/04_NVT/structure_NVT_5.rst7"
 
 # Short label used in SLURM job names (e.g. "WT", "D127N")
 scheme=""

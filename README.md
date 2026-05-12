@@ -1,4 +1,4 @@
-# Molecular dynamics protocols
+# AMBER Molecular Dynamics Protocols
 
 A curated collection of MD simulation workflows.
 
@@ -6,6 +6,7 @@ A curated collection of MD simulation workflows.
 
 | Directory | Description |
 |---|---|
-| `amber-nvt-workflow/`              | Workflow to run long NVT simulations using AMBER       |
-| `amber-FEP-ligand-transformation/` | Workflow to run FEP ligand transformations using AMBER |
+| `NVT_MMMD_protein_simulation/`          | Workflow to run long NVT MM MD simulations using AMBER                    |
+| `FEP_ligand_alchemical_transformation/` | Workflow to run FEP ligand alchemical transformations using AMBER          |
+| `QMMM_MD/`                              | Workflow to run QM/MM umbrella sampling PMF calculations using AMBER       |
 

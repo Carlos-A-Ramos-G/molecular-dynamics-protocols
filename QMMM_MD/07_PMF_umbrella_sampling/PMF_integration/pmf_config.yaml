@@ -20,7 +20,7 @@ temperature: 310        # simulation temperature (K)
 wham_numpad: 0          # histogram padding (0 = none)
 
 # ── Error estimation (2_PMF_error.py) ────────────────────────────────────────
-error_chunks: 20        # number of equal data blocks per window for block averaging
+error_chunks: 10        # number of equal data blocks per window for block averaging
 
 # ── Output file names ─────────────────────────────────────────────────────────
 meta_file: "meta.dat"

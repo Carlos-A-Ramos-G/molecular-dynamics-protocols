@@ -192,16 +192,19 @@ def _gen_equil_cmd(resnew: str, sys_label: str, n_replicas: int,
         "    -r equil.rst -x equil.nc -l equil.log",
         "",
         f"# Extract {n_replicas} restart file(s) from the second half of the equilibration",
-        f"# trajectory.  cpptraj appends .1 … .{n_replicas} to the output name because",
-        f"# multiple frames are written; each replica's central window uses its own",
-        f"# numbered file as independent starting coordinates.",
-        "cpptraj <<_EOF",
-        "parm ti.prmtop",
-        f"trajin equil.nc {start} {end} {step}",
-        "trajout equil.rst7",
-        "_EOF",
-        "",
+        f"# trajectory.  Each replica gets its own explicitly named file equil.rst7.N so",
+        f"# the central production window can read it unambiguously.",
     ]
+    for r in range(1, n_replicas + 1):
+        frame = start + (r - 1) * step if n_replicas > 1 else end
+        lines += [
+            f"cpptraj <<_EOF",
+            "parm ti.prmtop",
+            f"trajin equil.nc {frame} {frame} 1",
+            f"trajout equil.rst7.{r} restart",
+            "_EOF",
+            "",
+        ]
 
     if mode == "parallel":
         # Submit all replicas' central window simultaneously
@@ -406,14 +409,18 @@ def _gen_local_script(sys_label: str, n_windows: int, n_replicas: int,
         '    -r equil.rst -x equil.nc -l equil.log',
         "",
         f"# Extract {n_replicas} restart file(s) from the second half of the equil",
-        "# trajectory.  cpptraj appends .1 … .N to the output filename.",
-        '$CPPTRAJ <<_EOF',
-        "parm ti.prmtop",
-        f"trajin equil.nc {start} {end} {step}",
-        "trajout equil.rst7",
-        "_EOF",
-        "",
+        "# trajectory.  Each replica gets its own explicitly named file equil.rst7.N.",
     ]
+    for r in range(1, n_replicas + 1):
+        frame = start + (r - 1) * step if n_replicas > 1 else end
+        L += [
+            '$CPPTRAJ <<_EOF',
+            "parm ti.prmtop",
+            f"trajin equil.nc {frame} {frame} 1",
+            f"trajout equil.rst7.{r} restart",
+            "_EOF",
+            "",
+        ]
 
     for replica in range(1, n_replicas + 1):
         L += [

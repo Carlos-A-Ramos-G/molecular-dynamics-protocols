@@ -21,9 +21,7 @@ PMF window STEP
   qmmask   = QMMASK,
   qmcharge = QCHARGE,
   qm_theory= 'QLEVEL',
-  qmcut=EECUT,
   printcharges = 1,
-  qm_ewald=0,
   writepdb  = 1, !QM region will be written on the very first step to the file qmmm_region.pdb
 /
 &wt type = 'DUMPFREQ', istep1=20/

@@ -25,7 +25,7 @@ atom2: 2242
 atom3: 617
 
 # ── Scan parameters ───────────────────────────────────────────────────────────
-coor0: 2.9              # starting coordinate value (Å) — applied to window 1
+coor0: -1.9              # starting coordinate value (Å) — applied to window 1
 windows: 30             # number of umbrella sampling windows
 scan_step: 0.1          # step size in Å per window (negative for reverse scan)
 

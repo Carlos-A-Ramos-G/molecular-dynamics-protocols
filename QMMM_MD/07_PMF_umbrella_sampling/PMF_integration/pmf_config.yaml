@@ -1,0 +1,25 @@
+# PMF Integration — Configuration
+# Edit this file, then run:
+#   python 1_PMF_setup.py [--config pmf_config.yaml]
+#
+# The script generates meta.dat and wham.sh from the values below.
+
+# ── Reaction coordinate windows ───────────────────────────────────────────────
+rc_start: -1.9          # center of the first window (Å or dimensionless RC)
+windows: 30             # total number of umbrella sampling windows
+rc_step: 0.1            # increment per window (positive = forward scan)
+
+# ── Umbrella restraint ────────────────────────────────────────────────────────
+force: 200              # force constant written to meta.dat (kcal/mol/Å²)
+
+# ── WHAM parameters (Alan Grossfield's wham) ──────────────────────────────────
+# hist_min and hist_max are derived automatically from rc_start, windows, rc_step
+wham_bins: 150          # number of histogram bins
+wham_tol: 0.0001        # convergence tolerance
+temperature: 310        # simulation temperature (K)
+wham_numpad: 0          # histogram padding (0 = none)
+
+# ── Output file names ─────────────────────────────────────────────────────────
+meta_file: "meta.dat"
+pmf_output: "PMF_final"
+wham_log: "out_final"

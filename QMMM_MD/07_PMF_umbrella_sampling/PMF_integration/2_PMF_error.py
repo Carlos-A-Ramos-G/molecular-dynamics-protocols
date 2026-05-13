@@ -60,7 +60,7 @@ def window_centers(rc_start: float, windows: int, rc_step: float) -> list:
 def split_window_files(cfg: dict, work_dir: Path, tmp_dir: Path) -> None:
     n = cfg["error_chunks"]
     for win in range(1, cfg["windows"] + 1):
-        src = work_dir / f"{win}.dat"
+        src = work_dir / f"../{win}.dat"
         if not src.exists():
             sys.exit(f"Window file not found: {src}")
         lines = [l for l in src.read_text().splitlines() if l.strip()]

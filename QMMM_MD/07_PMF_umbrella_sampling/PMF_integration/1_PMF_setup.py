@@ -48,7 +48,7 @@ def write_meta(cfg: dict, out_dir: Path) -> None:
     centers = window_centers(cfg["rc_start"], cfg["windows"], cfg["rc_step"])
     force = cfg["force"]
     meta_path = out_dir / cfg["meta_file"]
-    lines = [f"{i + 1}.dat {c:.1f} {force}\n" for i, c in enumerate(centers)]
+    lines = [f"../{i + 1}.dat {c:.1f} {force}\n" for i, c in enumerate(centers)]
     meta_path.write_text("".join(lines))
     print(f"Written: {meta_path}  ({len(lines)} windows)")
 

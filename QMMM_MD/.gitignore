@@ -5,6 +5,8 @@
 !07_PMF_umbrella_sampling/
 !07_PMF_umbrella_sampling/PMF_integration/
 !07_PMF_umbrella_sampling/PMF_integration/1_PMF_setup.py
+!07_PMF_umbrella_sampling/PMF_integration/2_PMF_error.py
+!07_PMF_umbrella_sampling/PMF_integration/3_plot_PMF.py
 !07_PMF_umbrella_sampling/PMF_integration/pmf_config.yaml
 
 # Simulation outputs

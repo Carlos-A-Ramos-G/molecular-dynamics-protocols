@@ -4,8 +4,6 @@
 # automatically by fep_runner.py based on the values below.
 # =============================================================================
 
-# Name of the top-level directory for this mutation (no spaces)
-system_name: FCE_to_ACE
 
 # Number of Gauss-Legendre lambda windows.
 # Supported values: any integer >= 3 (common: 5, 9, 12).
@@ -21,9 +19,9 @@ replicates: 1
 # -----------------------------------------------------------------------------
 amber:
   # Module loaded for GPU production runs and minimisation
-  cuda_module: amber/20_cuda_rhel8
+  cuda_module: amber/24
   # Module loaded for CPU equilibration (pmemd.MPI)
-  cpu_module: amber/20
+  cpu_module: amber/24
   # Directory containing libcuda.so.1 when it is not in the default library path
   # (needed on immutable-OS hosts where the NVIDIA driver lives under /run/host).
   # Leave empty or omit to skip.
@@ -39,8 +37,8 @@ slurm:
   gpu:
     ntasks: 1
     gres: gpu:1
-    partition: penelope
-    qos: penelope
+    partition: partition_name
+    qos: qos_name
 
   cpu:
     # ntasks must match the -n argument passed to srun for pmemd.MPI
@@ -61,7 +59,7 @@ simulation:
     ntwx: 1000              # trajectory write frequency (frames)
 
   prod:
-    nstlim: 5000000         # steps  (5 ns at dt=0.001)
+    nstlim: 1000000         # steps  (5 ns at dt=0.001)
     dt: 0.001               # ps
     ntwe: 1000              # energy/dV-dL write frequency (steps)
     ntwx: 10000             # trajectory write frequency (steps)
@@ -69,29 +67,38 @@ simulation:
 
 # -----------------------------------------------------------------------------
 # Per-system alchemical masks
-# These differ between the free (ligand) and bound (michaelis) legs.
+# These differ between the free (unbounded) and bound (bounded) legs.
 # timask1/2 : residue ranges for the disappearing/appearing groups (TIMASK)
 # scmask1/2 : atom ranges for soft-core treatment (SCMASK)
 # resnew    : three-letter code of the appearing residue (used in job names)
 # parameters: topology file name inside <system_name>/setup/
 # coordinates: coordinate file name inside <system_name>/setup/
 # -----------------------------------------------------------------------------
+
+# Name of the top-level directory for this mutation (no spaces)
+
+resnew: LCN
+resold: ACN
+
 systems:
 
-  ligand:
+  unbounded:
     parameters: ligands_solvated.prmtop
     coordinates: ligands_solvated.inpcrd
     timask1: "':1-4'"
     timask2: "':5-8'"
-    scmask1: "'@1-4'"
-    scmask2: "'@68-71'"
-    resnew: ACE
+    scmask1: "'@54-65'"
+    scmask2: "'@121'"
 
-  michaelis:
+
+  bounded:
     parameters: complex_solvated.prmtop
     coordinates: complex_solvated.inpcrd
     timask1: "':608-611'"
     timask2: "':612-615'"
-    scmask1: "'@9291-9294'"
-    scmask2: "'@9358-9361'"
-    resnew: ACE
+    scmask1: "'@9344-9355'"
+    scmask2: "'@9411'"
+
+
+
+

@@ -451,7 +451,7 @@ def _write_exe(path: Path, content: str) -> None:
 
 
 def setup(cfg: dict, submit: bool = False, mode: str = "serial") -> None:
-    system_name = cfg["system_name"]
+    system_name = f"{cfg['resnew']}_to_{cfg['resold']}"
     n_lambdas = cfg["n_lambdas"]
     n_replicas = cfg["replicates"]
 
@@ -525,7 +525,7 @@ def setup(cfg: dict, submit: bool = False, mode: str = "serial") -> None:
                 )
 
         # Mode-specific job scripts
-        resnew = sys_cfg["resnew"]
+        resnew = cfg["resnew"]
 
         if mode == "local":
             _write_exe(
@@ -642,7 +642,7 @@ def _system_average(sys_label: str, base: Path, n_replicas: int,
 
 
 def analyse(cfg: dict, tail_lines: int = 4000) -> None:
-    system_name = cfg["system_name"]
+    system_name = f"{cfg['resnew']}_to_{cfg['resold']}"
     n_lambdas = cfg["n_lambdas"]
     n_replicas = cfg["replicates"]
     _, weights = compute_gl_quadrature(n_lambdas)
@@ -664,13 +664,13 @@ def analyse(cfg: dict, tail_lines: int = 4000) -> None:
         except (FileNotFoundError, RuntimeError) as exc:
             sys.exit(f"  ERROR: {exc}")
 
-    lig = results["ligand"]
-    mic = results["michaelis"]
+    lig = results["unbounded"]
+    mic = results["bounded"]
     ddG = mic[0] - lig[0]
     err = (mic[1] ** 2 + lig[1] ** 2) ** 0.5
 
     print(f"\n{'=' * 60}")
-    print(f"  ΔΔG = ΔG(michaelis) − ΔG(ligand)")
+    print(f"  ΔΔG = ΔG(bounded) − ΔG(unbounded)")
     print(f"  ΔΔG = {ddG:+.3f} ± {err:.3f} kcal/mol")
     print(f"{'=' * 60}\n")
 

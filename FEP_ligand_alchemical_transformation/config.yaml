@@ -24,6 +24,10 @@ amber:
   cuda_module: amber/20_cuda_rhel8
   # Module loaded for CPU equilibration (pmemd.MPI)
   cpu_module: amber/20
+  # Directory containing libcuda.so.1 when it is not in the default library path
+  # (needed on immutable-OS hosts where the NVIDIA driver lives under /run/host).
+  # Leave empty or omit to skip.
+  cuda_lib_path: /path/to/nvidia-driver-libs
 
 
 # -----------------------------------------------------------------------------

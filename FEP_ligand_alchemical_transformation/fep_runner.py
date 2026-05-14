@@ -165,7 +165,7 @@ def _gen_min_cmd(resnew: str, sys_label: str, cfg: dict) -> str:
     return "\n".join([
         header, mods,
         "srun $AMBERHOME/bin/pmemd.cuda -i min.in -c ti.inpcrd -p ti.prmtop -O \\",
-        "    -o min.out -inf min.info -e min.en -r min.rst -l min.log",
+        "    -o min.out -inf min.info -e min.en -r min.rst7 -l min.log",
         "",
         "sbatch FEP_EQUIL.cmd",
         "",
@@ -187,9 +187,9 @@ def _gen_equil_cmd(resnew: str, sys_label: str, n_replicas: int,
     lines = [
         header, mods,
         f"srun -n {n_tasks} $AMBERHOME/bin/pmemd.MPI -O \\",
-        "    -i equil.in -c min.rst -p ti.prmtop \\",
+        "    -i equil.in -c min.rst7 -p ti.prmtop \\",
         "    -o equil.out -inf equil.info -e equil.en \\",
-        "    -r equil.rst -x equil.nc -l equil.log",
+        "    -r equil.rst7 -x equil.nc -l equil.log",
         "",
         f"# Extract {n_replicas} restart file(s) from the second half of the equilibration",
         f"# trajectory.  Each replica gets its own explicitly named file equil.rst7.N so",
@@ -285,19 +285,14 @@ def _gen_prod_cmd(window: int, replica: int, n_windows: int, n_replicas: int,
     The only mode-dependent part is which job(s) to submit afterwards.
     """
     mid = _middle(n_windows)
-    prod = cfg["simulation"]["prod"]
-    last_frame = prod["nstlim"] // prod["ntwx"]
 
     # Starting coordinates
     if window == mid:
         coords = f"../../equil.rst7.{replica}"
     elif window < mid:
-        coords = f"../{window + 1}/ti001_{window + 1}_final.rst7"
+        coords = f"../{window + 1}/ti{replica}_{window + 1}.rst7"
     else:
-        coords = f"../{window - 1}/ti001_{window - 1}_final.rst7"
-
-    # Windows 1 and N are chain endpoints; no downstream window reads from them.
-    save_rst = (window != 1) and (window != n_windows)
+        coords = f"../{window - 1}/ti{replica}_{window - 1}.rst7"
 
     submissions = _prod_submissions(window, replica, n_windows, n_replicas, mode)
 
@@ -308,21 +303,10 @@ def _gen_prod_cmd(window: int, replica: int, n_windows: int, n_replicas: int,
     lines = [
         header, mods,
         f"srun $AMBERHOME/bin/pmemd.cuda -i ti_{window}.in -c {coords} -p ti.prmtop -O \\",
-        f"    -o ti001_{window}.out -inf ti001_{window}.info -e ti001_{window}.en \\",
-        f"    -r ti001_{window}.rst -x ti001_{window}.nc -l ti001_{window}.log",
+        f"    -o ti{replica}_{window}.out -inf ti{replica}_{window}.info -e ti{replica}_{window}.en \\",
+        f"    -r ti{replica}_{window}.rst7 -x ti{replica}_{window}.nc -l ti{replica}_{window}.log",
         "",
     ]
-
-    if save_rst:
-        lines += [
-            "cpptraj <<_EOF",
-            "parm ti.prmtop",
-            f"trajin ti001_{window}.nc {last_frame} {last_frame} 1",
-            f"trajout ti001_{window}_final.rst7",
-            "run",
-            "_EOF",
-            "",
-        ]
 
     if len(submissions) > 1:
         # Bidirectional fan-out: use subshells so both sbatch calls happen
@@ -357,8 +341,6 @@ def _gen_local_script(sys_label: str, n_windows: int, n_replicas: int,
         nohup bash run_local.sh > run.log 2>&1 & # background
     """
     mid = _middle(n_windows)
-    prod = cfg["simulation"]["prod"]
-    last_frame = prod["nstlim"] // prod["ntwx"]
 
     start, end, step = _equil_cpptraj_params(cfg, n_replicas)
 
@@ -400,13 +382,13 @@ def _gen_local_script(sys_label: str, n_windows: int, n_replicas: int,
         "# ---- Minimisation ------------------------------------------------",
         'log "Minimisation"',
         '$AMBER -i min.in -c ti.inpcrd -p ti.prmtop -O \\',
-        '    -o min.out -inf min.info -e min.en -r min.rst -l min.log',
+        '    -o min.out -inf min.info -e min.en -r min.rst7 -l min.log',
         "",
         "# ---- Equilibration (CPU — avoids MC-barostat runaway with TI on GPU) ---",
         'log "Equilibration"',
-        '$CPU_AMBER -i equil.in -c min.rst -p ti.prmtop -O \\',
+        '$CPU_AMBER -i equil.in -c min.rst7 -p ti.prmtop -O \\',
         '    -o equil.out -inf equil.info -e equil.en \\',
-        '    -r equil.rst -x equil.nc -l equil.log',
+        '    -r equil.rst7 -x equil.nc -l equil.log',
         "",
         f"# Extract {n_replicas} restart file(s) from the second half of the equil",
         "# trajectory.  Each replica gets its own explicitly named file equil.rst7.N.",
@@ -434,30 +416,18 @@ def _gen_local_script(sys_label: str, n_windows: int, n_replicas: int,
             if window == mid:
                 coords = f"../../equil.rst7.{replica}"
             elif window < mid:
-                coords = f"../{window + 1}/ti001_{window + 1}_final.rst7"
+                coords = f"../{window + 1}/ti{replica}_{window + 1}.rst7"
             else:
-                coords = f"../{window - 1}/ti001_{window - 1}_final.rst7"
-
-            save_rst = (window != 1) and (window != n_windows)
+                coords = f"../{window - 1}/ti{replica}_{window - 1}.rst7"
 
             L += [
                 f'log "  Window {window}/{n_windows}  lambda={clambda:.5f}"',
                 f'cd "$SYSDIR/replica_{replica}/{window}"',
                 f'$AMBER -i ti_{window}.in -c {coords} -p ti.prmtop -O \\',
-                f'    -o ti001_{window}.out -inf ti001_{window}.info \\',
-                f'    -e ti001_{window}.en   -r ti001_{window}.rst \\',
-                f'    -x ti001_{window}.nc   -l ti001_{window}.log',
+                f'    -o ti{replica}_{window}.out -inf ti{replica}_{window}.info \\',
+                f'    -e ti{replica}_{window}.en   -r ti{replica}_{window}.rst7 \\',
+                f'    -x ti{replica}_{window}.nc   -l ti{replica}_{window}.log',
             ]
-
-            if save_rst:
-                L += [
-                    '$CPPTRAJ <<_EOF',
-                    "parm ti.prmtop",
-                    f"trajin ti001_{window}.nc {last_frame} {last_frame} 1",
-                    f"trajout ti001_{window}_final.rst7",
-                    "run",
-                    "_EOF",
-                ]
 
             L.append("")
 
@@ -656,7 +626,7 @@ def _system_average(sys_label: str, base: Path, n_replicas: int,
         window_means = [
             _extract_dvdl(
                 base / sys_label / f"replica_{replica}" / str(w)
-                / f"ti001_{w}.en",
+                / f"ti{replica}_{w}.en",
                 tail_lines,
             ).mean()
             for w in range(1, n_lambdas + 1)

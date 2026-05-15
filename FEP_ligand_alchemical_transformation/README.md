@@ -23,7 +23,7 @@ one job at a time), and **parallel** (SLURM, all replicas simultaneously).
            C=O                                   C=O
            |                                     |
            N--[bicycle]         FEP/TI           N--[bicycle]
-           |            ──────────────►          |
+           |                ──────────────►      |
            C=O               (DeltaDeltaG)       C=O
            |                                     |
           NH                                    NH
@@ -40,20 +40,17 @@ one job at a time), and **parallel** (SLURM, all replicas simultaneously).
 --------------------------------------------------------------------------------
   MUTATION SITE:
 
-  LCN:  ...NH-CH(CN)-CH2-C(=O)-NH-CH2...   <- 5-membered lactam (covalent)
+  LCN:  ...NH-CH(CN)-CH2-C(=O)-NH-CH2...   <- gamma lactam ring
                           |______________|
                             lactam ring
 
-  ACN:  ...NH-CH(CN)-CH3                   <- methyl (non-covalent)
+  ACN:  ...NH-CH(CN)-CH3                   <- methyl
 
 --------------------------------------------------------------------------------
   UNCHANGED SCAFFOLD:
   F3C-C(=O)-NH -- tBu-CH -- C(=O)-N-[GQU bicycle] -- C(=O)-NH -- CH(CN)
 
-================================================================================
-  LCN = lactam alpha-aminonitrile (covalent warhead)
-  ACN = alpha-methylcyanamide (non-covalent probe)
-================================================================================
+
 ```
 
 ---

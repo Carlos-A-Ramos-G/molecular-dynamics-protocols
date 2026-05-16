@@ -20,8 +20,7 @@ replicates: 1
 amber:
   # Module loaded for GPU production runs and minimisation
   cuda_module: amber/24
-  # Module loaded for CPU equilibration (pmemd.MPI)
-  cpu_module: amber/24
+
   # Directory containing libcuda.so.1 when it is not in the default library path
   # (needed on immutable-OS hosts where the NVIDIA driver lives under /run/host).
   # Leave empty or omit to skip.
@@ -31,7 +30,6 @@ amber:
 # -----------------------------------------------------------------------------
 # SLURM resource specifications
 # Use the gpu block for minimisation and all production windows.
-# Use the cpu block for the equilibration stage only.
 # Any key written here is passed directly as #SBATCH --key=value, so you can
 # add options like qos, account, mem, etc. without editing fep_runner.py.
 # -----------------------------------------------------------------------------
@@ -42,22 +40,14 @@ slurm:
     gres: gpu:1
     partition: partition_name
 
-  cpu:
-    # ntasks is substituted into the cpu execution_command template below.
-    ntasks: 4
 
 
 # -----------------------------------------------------------------------------
 # Execution commands
 # gpu : command used for minimisation and all production windows.
-# cpu : command used for equilibration; {ntasks} is replaced automatically
-#       with slurm.cpu.ntasks — keep the placeholder in place.
-# Modify these to switch launchers (e.g. mpirun) or executable paths.
 # -----------------------------------------------------------------------------
 execution_command:
   gpu: "srun $AMBERHOME/bin/pmemd.cuda"
-  cpu: "srun -n {ntasks} $AMBERHOME/bin/pmemd.MPI"
-
 
 # -----------------------------------------------------------------------------
 # Simulation parameters

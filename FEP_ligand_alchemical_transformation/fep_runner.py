@@ -75,7 +75,7 @@ _MIN_TEMPLATE = """\
 minimisation
  &cntrl
    imin = 1, ntmin = 2, maxcyc = {maxcyc},
-   ntpr = 500, ntwe = 20,
+   ntpr = {ntpr}, ntwe = 20,
    dx0 = 1.0D-7,
    ntb = 1, ntxo = 1,
 
@@ -84,8 +84,25 @@ minimisation
    timask1 = {timask1}, timask2 = {timask2},
    scmask1 = {scmask1}, scmask2 = {scmask2},
  /
+"""
 
- &ewald
+_HEATING_TEMPLATE = """\
+NVT heating
+ &cntrl
+   nstlim = {nstlim}, irest = 0, ntx = 1, dt = {dt},
+   nmropt = 1,  ntt = 3, tempi = {tempi}, temp0 = {temp0}, gamma_ln = 2.0, ig = -1,
+   ntc = 1, ntf = 1,
+   ntb = 1, ntp = 0,
+   ntwe = {ntwx}, ntwx = {ntwx}, ntpr = {ntwx}, ntwr = {ntwx},
+
+   icfe = 1, ifsc = 1, clambda = 0.5, scalpha = 0.5, scbeta = 12.0,
+   logdvdl = 0,
+   timask1 = {timask1}, timask2 = {timask2},
+   scmask1 = {scmask1}, scmask2 = {scmask2},
+ /
+ &wt type='TEMP0', istep1=0, istep2={ramp_end}, value1={tempi}, value2={temp0} /
+ &wt type='TEMP0', istep1={ramp_end_p1}, istep2={nstlim}, value1={temp0}, value2={temp0} /
+ &wt type='END' /
  /
 """
 
@@ -104,9 +121,6 @@ TI equilibration
    timask1 = {timask1}, timask2 = {timask2},
    scmask1 = {scmask1}, scmask2 = {scmask2},
  /
-
- &ewald
- /
 """
 
 _PROD_TEMPLATE = """\
@@ -122,9 +136,6 @@ TI simulation
    logdvdl = 0,
    timask1 = {timask1}, timask2 = {timask2},
    scmask1 = {scmask1}, scmask2 = {scmask2},
- /
-
- &ewald
  /
 """
 
@@ -163,40 +174,33 @@ def _equil_cpptraj_params(cfg: dict, n_replicas: int) -> tuple[int, int, int]:
 
 
 # ---------------------------------------------------------------------------
-# Minimisation SLURM script (identical for all cluster modes)
+# Combined equilibration SLURM script: min → heating → equil → submit prod
+# (differs between serial and parallel for the production submission step)
 # ---------------------------------------------------------------------------
 
-def _gen_min_cmd(resnew: str, sys_label: str, cfg: dict) -> str:
-    header = _sbatch_header(f"{resnew}-min-{sys_label}", cfg["slurm"]["gpu"])
+def _gen_equilibration_cmd(resnew: str, sys_label: str, n_replicas: int,
+                            middle: int, cfg: dict, mode: str) -> str:
+    resources = cfg["slurm"]["gpu"]
+    n_tasks_cpu = cfg["slurm"]["cpu"]["ntasks"]
+    header = _sbatch_header(f"{resnew}-equil-{sys_label}", resources)
     mods = _module_block(cfg["amber"]["cuda_module"])
     gpu_cmd = cfg["execution_command"]["gpu"]
-    return "\n".join([
+    cpu_cmd = cfg["execution_command"]["cpu"].format(ntasks=n_tasks_cpu)
+    start, end, step = _equil_cpptraj_params(cfg, n_replicas)
+
+    lines = [
         header, mods,
+        "# ---- Minimisation",
         f"{gpu_cmd} -i min.in -c ti.rst7 -p ti.parm7 -O \\",
         "    -o min.out -inf min.info -e min.en -r min.rst7 -l min.log",
         "",
-        "sbatch FEP_EQUIL.cmd",
+        "# ---- NVT heating",
+        f"{gpu_cmd} -i heating.in -c min.rst7 -p ti.parm7 -O \\",
+        "    -o heating.out -inf heating.info -e heating.en -r heating.rst7 -x heating.nc -l heating.log",
         "",
-    ])
-
-
-# ---------------------------------------------------------------------------
-# Equilibration SLURM script  (differs between serial and parallel)
-# ---------------------------------------------------------------------------
-
-def _gen_equil_cmd(resnew: str, sys_label: str, n_replicas: int,
-                   middle: int, cfg: dict, mode: str) -> str:
-    resources = cfg["slurm"]["cpu"]
-    n_tasks = resources["ntasks"]
-    header = _sbatch_header(f"{resnew}-equil-{sys_label}", resources)
-    mods = _module_block(cfg["amber"]["cpu_module"])
-    start, end, step = _equil_cpptraj_params(cfg, n_replicas)
-
-    cpu_cmd = cfg["execution_command"]["cpu"].format(ntasks=n_tasks)
-    lines = [
-        header, mods,
+        "# ---- Equilibration",
         f"{cpu_cmd} -O \\",
-        "    -i equil.in -c min.rst7 -p ti.parm7 \\",
+        "    -i equil.in -c heating.rst7 -p ti.parm7 \\",
         "    -o equil.out -inf equil.info -e equil.en \\",
         "    -r equil.rst7 -x equil.nc -l equil.log",
         "",
@@ -207,7 +211,7 @@ def _gen_equil_cmd(resnew: str, sys_label: str, n_replicas: int,
     for r in range(1, n_replicas + 1):
         frame = start + (r - 1) * step if n_replicas > 1 else end
         lines += [
-            f"cpptraj <<_EOF",
+            "cpptraj <<_EOF",
             "parm ti.parm7",
             f"trajin equil.nc {frame} {frame} 1",
             f"trajout equil.rst7.{r} restart",
@@ -216,7 +220,6 @@ def _gen_equil_cmd(resnew: str, sys_label: str, n_replicas: int,
         ]
 
     if mode == "parallel":
-        # Submit all replicas' central window simultaneously
         lines += [
             "top=$(pwd)",
             f"for r in $(seq 1 {n_replicas}); do",
@@ -374,7 +377,6 @@ def _gen_local_script(sys_label: str, n_windows: int, n_replicas: int,
         "",
         ': "${AMBERHOME:?Please set AMBERHOME before running this script}"',
         'AMBER="$AMBERHOME/bin/pmemd.cuda"',
-        'CPU_AMBER="$AMBERHOME/bin/pmemd"',
         'CPPTRAJ="$AMBERHOME/bin/cpptraj"',
         "",
     ]
@@ -394,9 +396,15 @@ def _gen_local_script(sys_label: str, n_windows: int, n_replicas: int,
         '$AMBER -i min.in -c ti.rst7 -p ti.parm7 -O \\',
         '    -o min.out -inf min.info -e min.en -r min.rst7 -l min.log',
         "",
-        "# ---- Equilibration (CPU — avoids MC-barostat runaway with TI on GPU) ---",
+        "# ---- NVT heating ------------------------------------------------",
+        'log "Heating"',
+        '$AMBER -i heating.in -c min.rst7 -p ti.parm7 -O \\',
+        '    -o heating.out -inf heating.info -e equil.en \\',
+        '    -r heating.rst7 -x heating.nc -l equil.log',
+        "",
+        "# ---- Equilibration ----------------------------------------------",
         'log "Equilibration"',
-        '$CPU_AMBER -i equil.in -c min.rst7 -p ti.parm7 -O \\',
+        '$AMBER -i equil.in -c heating.rst7 -p ti.parm7 -O \\',
         '    -o equil.out -inf equil.info -e equil.en \\',
         '    -r equil.rst7 -x equil.nc -l equil.log',
         "",
@@ -501,9 +509,27 @@ def setup(cfg: dict, submit: bool = False, mode: str = "serial") -> None:
             scmask1=sys_cfg["scmask1"], scmask2=sys_cfg["scmask2"],
         )
 
-        # AMBER input files at system level (λ=0.5 for min and equil)
+        # AMBER input files at system level (λ=0.5 for min, heating, and equil)
         (sys_dir / "min.in").write_text(
-            _MIN_TEMPLATE.format(maxcyc=sim["min"]["maxcyc"], **mask)
+            _MIN_TEMPLATE.format(
+                maxcyc=sim["min"]["maxcyc"],
+                ntpr=sim["min"]["ntpr"],
+                **mask,
+            )
+        )
+        _heat = sim["heating"]
+        _ramp_end = int(0.8 * _heat["nstlim"])
+        (sys_dir / "heating.in").write_text(
+            _HEATING_TEMPLATE.format(
+                nstlim=_heat["nstlim"],
+                dt=_heat["dt"],
+                ntwx=_heat["ntwx"],
+                tempi=_heat["tempi"],
+                temp0=_heat["temp0"],
+                ramp_end=_ramp_end,
+                ramp_end_p1=_ramp_end + 1,
+                **mask,
+            )
         )
         (sys_dir / "equil.in").write_text(
             _EQUIL_TEMPLATE.format(
@@ -543,10 +569,10 @@ def setup(cfg: dict, submit: bool = False, mode: str = "serial") -> None:
                 _gen_local_script(sys_label, n_lambdas, n_replicas, lambdas, cfg),
             )
         else:
-            _write_exe(sys_dir / "FEP_MIN.cmd",
-                       _gen_min_cmd(resnew, sys_label, cfg))
-            _write_exe(sys_dir / "FEP_EQUIL.cmd",
-                       _gen_equil_cmd(resnew, sys_label, n_replicas, mid, cfg, mode))
+            _write_exe(
+                sys_dir / "EQUILIBRATION.cmd",
+                _gen_equilibration_cmd(resnew, sys_label, n_replicas, mid, cfg, mode),
+            )
             for replica in range(1, n_replicas + 1):
                 for w_idx, _ in enumerate(lambdas, 1):
                     win_dir = sys_dir / f"replica_{replica}" / str(w_idx)
@@ -602,11 +628,11 @@ def _submit(cfg: dict, mode: str) -> None:
     else:
         for sys_label in cfg["systems"]:
             sys_dir = base / sys_label
-            cmd_file = sys_dir / "FEP_MIN.cmd"
+            cmd_file = sys_dir / "EQUILIBRATION.cmd"
             if not cmd_file.exists():
                 sys.exit(f"Script not found: {cmd_file}\nRun 'setup' first.")
             result = subprocess.run(
-                ["sbatch", "FEP_MIN.cmd"],
+                ["sbatch", "EQUILIBRATION.cmd"],
                 capture_output=True, text=True, cwd=sys_dir,
             )
             if result.returncode == 0:

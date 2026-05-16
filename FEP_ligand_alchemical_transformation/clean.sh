@@ -58,15 +58,16 @@ fi
 
 # All named files at the system-directory level (generated + original templates)
 SETUP_FILES=(
-    min.in equil.in
+    min.in heating.in equil.in
     ti.parm7 ti.rst7
-    FEP_MIN.cmd FEP_EQUIL.cmd
+    EQUILIBRATION.cmd
     run_local.sh
 )
 
 # Simulation outputs that AMBER / cpptraj write at the system-directory level
 SIM_FILES=(
     min.out min.info min.en min.rst7 min.log
+    heating.out heating.info heating.en heating.rst7 heating.nc heating.log
     equil.out equil.info equil.en equil.rst7 equil.nc equil.log
     run.log
 )

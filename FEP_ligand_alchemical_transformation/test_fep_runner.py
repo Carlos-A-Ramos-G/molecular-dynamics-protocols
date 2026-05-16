@@ -191,7 +191,7 @@ def generated_serial(tmp_path_factory):
 
 
 # ---------------------------------------------------------------------------
-# Generic SLURM header — all slurm.gpu keys must appear in FEP_MIN.cmd
+# Generic SLURM header — all slurm.gpu keys must appear in EQUILIBRATION.cmd
 # ---------------------------------------------------------------------------
 
 _gpu_resources = _cfg["slurm"]["gpu"]
@@ -199,15 +199,15 @@ _gpu_resources = _cfg["slurm"]["gpu"]
 
 @pytest.mark.parametrize("key,value", _gpu_resources.items())
 def test_slurm_header_gpu_keys(generated_serial, key, value):
-    """Every key in slurm.gpu must produce a #SBATCH directive in FEP_MIN.cmd."""
-    cmd = (generated_serial / SYSTEM_NAME / "unbounded" / "FEP_MIN.cmd").read_text()
+    """Every key in slurm.gpu must produce a #SBATCH directive in EQUILIBRATION.cmd."""
+    cmd = (generated_serial / SYSTEM_NAME / "unbounded" / "EQUILIBRATION.cmd").read_text()
     assert f"#SBATCH --{key}={value}" in cmd, (
-        f"Expected '#SBATCH --{key}={value}' in FEP_MIN.cmd"
+        f"Expected '#SBATCH --{key}={value}' in EQUILIBRATION.cmd"
     )
 
 
 # ---------------------------------------------------------------------------
-# execution_command — GPU command in min and prod scripts
+# EQUILIBRATION.cmd — combined min + heating + equil script
 # ---------------------------------------------------------------------------
 
 _gpu_exec = _cfg["execution_command"]["gpu"]
@@ -219,11 +219,41 @@ _mid = (N_WINDOWS + 1) // 2
 _sample_windows = sorted({1, _mid, N_WINDOWS})
 
 
-def test_slurm_min_uses_gpu_execution_command(generated_serial):
-    """FEP_MIN.cmd must contain the gpu execution command from config."""
-    cmd = (generated_serial / SYSTEM_NAME / "unbounded" / "FEP_MIN.cmd").read_text()
-    assert _gpu_exec in cmd, f"Expected '{_gpu_exec}' in FEP_MIN.cmd"
+def test_slurm_equilibration_cmd_exists(generated_serial):
+    """EQUILIBRATION.cmd must be generated (replaces the old FEP_MIN/FEP_EQUIL pair)."""
+    cmd = generated_serial / SYSTEM_NAME / "unbounded" / "EQUILIBRATION.cmd"
+    assert cmd.exists(), "EQUILIBRATION.cmd missing"
+    assert cmd.stat().st_mode & 0o111, "EQUILIBRATION.cmd not executable"
 
+
+def test_slurm_equilibration_contains_gpu_command(generated_serial):
+    """EQUILIBRATION.cmd must use the GPU execution command for min and heating."""
+    cmd = (generated_serial / SYSTEM_NAME / "unbounded" / "EQUILIBRATION.cmd").read_text()
+    assert _gpu_exec in cmd, f"Expected '{_gpu_exec}' in EQUILIBRATION.cmd"
+
+
+def test_slurm_equilibration_contains_cpu_command(generated_serial):
+    """EQUILIBRATION.cmd must use the CPU execution command for equilibration."""
+    cmd = (generated_serial / SYSTEM_NAME / "unbounded" / "EQUILIBRATION.cmd").read_text()
+    assert _cpu_exec in cmd, f"Expected '{_cpu_exec}' in EQUILIBRATION.cmd"
+
+
+def test_slurm_equilibration_contains_all_three_stages(generated_serial):
+    """EQUILIBRATION.cmd must reference min.in, heating.in, and equil.in."""
+    cmd = (generated_serial / SYSTEM_NAME / "unbounded" / "EQUILIBRATION.cmd").read_text()
+    for stage in ("min.in", "heating.in", "equil.in"):
+        assert stage in cmd, f"EQUILIBRATION.cmd missing reference to {stage}"
+
+
+def test_slurm_equilibration_chains_to_prod(generated_serial):
+    """EQUILIBRATION.cmd must submit the central production window."""
+    cmd = (generated_serial / SYSTEM_NAME / "unbounded" / "EQUILIBRATION.cmd").read_text()
+    assert f"FEP_PROD_{_mid}.cmd" in cmd
+
+
+# ---------------------------------------------------------------------------
+# execution_command — GPU command in prod scripts
+# ---------------------------------------------------------------------------
 
 @pytest.mark.parametrize("window", _sample_windows)
 def test_slurm_prod_uses_gpu_execution_command(generated_serial, window):
@@ -236,10 +266,88 @@ def test_slurm_prod_uses_gpu_execution_command(generated_serial, window):
 
 
 # ---------------------------------------------------------------------------
-# execution_command — CPU command (with ntasks substitution) in equil script
+# heating.in — generated for both legs in local mode
 # ---------------------------------------------------------------------------
 
-def test_slurm_equil_uses_cpu_execution_command(generated_serial):
-    """FEP_EQUIL.cmd must contain the cpu execution command with ntasks substituted."""
-    cmd = (generated_serial / SYSTEM_NAME / "unbounded" / "FEP_EQUIL.cmd").read_text()
-    assert _cpu_exec in cmd, f"Expected '{_cpu_exec}' in FEP_EQUIL.cmd"
+_heat_cfg = _cfg["simulation"]["heating"]
+
+
+@pytest.mark.parametrize("system", ["bounded", "unbounded"])
+def test_heating_in_exists(generated, system):
+    """heating.in must be generated for every leg."""
+    heating = generated / SYSTEM_NAME / system / "heating.in"
+    assert heating.exists(), f"heating.in missing for {system}"
+
+
+@pytest.mark.parametrize("system", ["bounded", "unbounded"])
+@pytest.mark.parametrize("param,expected", [
+    ("nstlim", str(_heat_cfg["nstlim"])),
+    ("dt",     str(_heat_cfg["dt"])),
+    ("nmropt", "1"),
+    ("ntb",    "1"),
+    ("ntp",    "0"),
+])
+def test_heating_in_params(generated, system, param, expected):
+    """heating.in must contain correct NVT parameters."""
+    content = (generated / SYSTEM_NAME / system / "heating.in").read_text()
+    val = _extract_param(content, param)
+    assert val == expected, f"heating.in [{system}][{param}]: got {val!r}, expected {expected!r}"
+
+
+@pytest.mark.parametrize("system", ["bounded", "unbounded"])
+def test_heating_in_contains_wt_block(generated, system):
+    """heating.in must contain the temperature ramp &wt block."""
+    content = (generated / SYSTEM_NAME / system / "heating.in").read_text()
+    assert "&wt" in content, f"heating.in for {system} missing &wt temperature ramp"
+    assert "TEMP0" in content
+
+
+# ---------------------------------------------------------------------------
+# run_local.sh — heating step and GPU equil
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("system", ["bounded", "unbounded"])
+def test_run_local_sh_contains_heating(generated, system):
+    """run_local.sh must include the NVT heating step."""
+    script = (generated / SYSTEM_NAME / system / "run_local.sh").read_text()
+    assert "heating.in" in script, f"run_local.sh for {system} missing heating step"
+    assert "heating.rst7" in script, f"run_local.sh for {system} missing heating.rst7 output"
+
+
+@pytest.mark.parametrize("system", ["bounded", "unbounded"])
+def test_run_local_sh_no_cpu_amber(generated, system):
+    """run_local.sh must not reference CPU_AMBER — equilibration now runs on GPU."""
+    script = (generated / SYSTEM_NAME / system / "run_local.sh").read_text()
+    assert "CPU_AMBER" not in script, f"run_local.sh for {system} still references CPU_AMBER"
+
+
+@pytest.mark.parametrize("system", ["bounded", "unbounded"])
+def test_run_local_equil_reads_from_heating(generated, system):
+    """Equilibration step in run_local.sh must use heating.rst7 as input coordinates."""
+    script = (generated / SYSTEM_NAME / system / "run_local.sh").read_text()
+    assert "-c heating.rst7" in script, (
+        f"run_local.sh for {system}: equil step must read from heating.rst7"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Extended minimisation — maxcyc and ntpr from config
+# ---------------------------------------------------------------------------
+
+_min_cfg = _cfg["simulation"]["min"]
+
+
+@pytest.mark.parametrize("system", ["bounded", "unbounded"])
+def test_min_maxcyc(generated, system):
+    """min.in maxcyc must match config."""
+    content = (generated / SYSTEM_NAME / system / "min.in").read_text()
+    val = _extract_param(content, "maxcyc")
+    assert val == str(_min_cfg["maxcyc"]), f"min.in [{system}] maxcyc: got {val!r}"
+
+
+@pytest.mark.parametrize("system", ["bounded", "unbounded"])
+def test_min_ntpr(generated, system):
+    """min.in ntpr must match config."""
+    content = (generated / SYSTEM_NAME / system / "min.in").read_text()
+    val = _extract_param(content, "ntpr")
+    assert val == str(_min_cfg["ntpr"]), f"min.in [{system}] ntpr: got {val!r}"
